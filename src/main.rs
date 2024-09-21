@@ -4,7 +4,8 @@ mod terrain_shader;
 
 use bevy::{color::palettes::css::RED, pbr::ExtendedMaterial, prelude::*};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
-use terrain_mesh::{blocky, VoxelStorage};
+use terrain_gen::FullWorld;
+use terrain_mesh::blocky;
 use terrain_shader::TerrainMaterial;
 
 fn main() {
@@ -25,24 +26,28 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, TerrainMaterial>>>,
 ) {
-    let terrain = terrain_gen::Terrain::gen();
-    let voxels = terrain.discretize();
+    let w = FullWorld::new();
+    let terrains = w.to_entities();
 
-    let mesh = blocky(&voxels.visible_faces());
+    for (offset, terrain) in terrains {
+        let voxels = terrain.discretize();
 
-    // cube
-    commands.spawn(MaterialMeshBundle {
-        mesh: meshes.add(mesh),
-        material: materials.add(ExtendedMaterial {
-            base: StandardMaterial {
-                base_color: RED.into(),
-                ..Default::default()
-            },
-            extension: TerrainMaterial { quantize_steps: 3 },
-        }),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        ..default()
-    });
+        let mesh = blocky(&voxels.visible_faces());
+
+        // cube
+        commands.spawn(MaterialMeshBundle {
+            mesh: meshes.add(mesh),
+            material: materials.add(ExtendedMaterial {
+                base: StandardMaterial {
+                    base_color: RED.into(),
+                    ..Default::default()
+                },
+                extension: TerrainMaterial { quantize_steps: 3 },
+            }),
+            transform: Transform::from_xyz(offset.0, 0.0, offset.1),
+            ..default()
+        });
+    }
     // light
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
