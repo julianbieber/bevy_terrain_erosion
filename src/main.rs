@@ -1,9 +1,13 @@
+mod terrain_erosion;
 mod terrain_gen;
 mod terrain_mesh;
 mod terrain_shader;
 
 use bevy::{color::palettes::css::RED, pbr::ExtendedMaterial, prelude::*};
 use bevy_panorbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
+use indicatif::ProgressBar;
+use rand::{rngs::SmallRng, SeedableRng};
+use terrain_erosion::apply_erosion;
 use terrain_gen::FullWorld;
 use terrain_mesh::blocky;
 use terrain_shader::TerrainMaterial;
@@ -26,7 +30,13 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, TerrainMaterial>>>,
 ) {
-    let w = FullWorld::new();
+    let mut w = FullWorld::new();
+    let e = 1000000;
+    let pb = ProgressBar::new(e);
+    let mut rng = SmallRng::from_seed([0; 32]);
+    for _ in pb.wrap_iter(0..e) {
+        apply_erosion(&mut w, &mut rng);
+    }
     let terrains = w.to_entities();
 
     for (offset, terrain) in terrains {

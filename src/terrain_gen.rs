@@ -20,6 +20,10 @@ impl FullWorld {
         FullWorld { chunks }
     }
 
+    pub fn range(&self) -> (isize, isize) {
+        ((-4 * 64 + 1), (4 * 64))
+    }
+
     pub fn to_entities<'a>(&'a self) -> Vec<((f32, f32), &'a Terrain)> {
         self.chunks
             .iter()
@@ -30,6 +34,30 @@ impl FullWorld {
                 ((x as f32, z as f32), c)
             })
             .collect()
+    }
+
+    // If a value is oob return a strength of 0 as if it is air
+    pub fn get_strength(&mut self, x: isize, y: u8, z: isize) -> Option<&mut f32> {
+        if x < (-4 * 64) || z < (-4 * 64) {
+            return None;
+        }
+        if x >= 4 * 64 || z >= 4 * 64 {
+            return None;
+        }
+        if y >= 64 {
+            return None;
+        }
+        let which_chunk_x = ((x + 4 * 64) / 64) as usize;
+        let which_chunk_z = ((z + 4 * 64) / 64) as usize;
+
+        let which_chunk_index = which_chunk_x + which_chunk_z * 8;
+
+        let inside_chunk_x = ((x + 4 * 64) % 64) as usize;
+        let inside_chunk_z = ((z + 4 * 64) % 64) as usize;
+
+        let inside_chunk_index = inside_chunk_x + inside_chunk_z * 64;
+
+        Some(&mut self.chunks[which_chunk_index].strengts[inside_chunk_index][y as usize])
     }
 }
 
@@ -51,10 +79,11 @@ impl Terrain {
                 let height =
                     (((n.get([scale_xz(r_x), scale_xz(r_z)]) + 1.0) / 2.0) * 64.0) as usize;
                 for y in 0..height {
-                    let strength = ((n.get([scale_xz(r_x), scale_xz(y as isize), scale_xz(r_z)])
-                        + 1.0)
-                        / 4.0) as f32
-                        + 0.5;
+                    let strength =
+                        ((n.get([scale_xz(r_x) + 10.0, scale_xz(y as isize), scale_xz(r_z)]))
+                            as f32
+                            + 0.1)
+                            .max(1.0);
 
                     t.strengts[x + z * 64][y] = strength;
                 }
@@ -67,7 +96,7 @@ impl Terrain {
         for (i, ys) in self.strengts.iter().enumerate() {
             let mut v = 0u64;
             for (i_y, y) in ys.iter().enumerate() {
-                if *y > 0.5 {
+                if *y > 0.1 {
                     v |= 1u64 << (i_y);
                 }
             }
@@ -78,5 +107,5 @@ impl Terrain {
 }
 
 fn scale_xz(v: isize) -> f64 {
-    v as f64 / 32.0
+    v as f64 / 64.0
 }
