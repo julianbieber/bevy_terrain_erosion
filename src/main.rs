@@ -1,13 +1,25 @@
 use bevy::{
     asset::RenderAssetUsages,
+    camera::Exposure,
+    color::palettes::css::ALICE_BLUE,
+    light::{AtmosphereEnvironmentMapLight, light_consts::lux},
+    pbr::{Atmosphere, AtmosphereSettings},
+    post_process::bloom::Bloom,
     prelude::*,
     render::render_resource::{Extent3d, TextureViewDescriptor, TextureViewDimension},
 };
 use bevy_clipmap::{Clipmap, ClipmapPlugin};
+use bevy_flycam::prelude::*;
 
 fn main() -> AppExit {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(NoCameraPlayerPlugin)
+        .insert_resource(KeyBindings {
+            move_ascend: KeyCode::KeyE,
+            move_descend: KeyCode::KeyQ,
+            ..Default::default()
+        })
         .add_plugins(ClipmapPlugin)
         .add_systems(Startup, startup)
         .add_systems(Update, move_camera)
@@ -15,7 +27,25 @@ fn main() -> AppExit {
 }
 
 fn startup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    let target = commands.spawn(Camera3d::default()).id();
+    let target = commands
+        .spawn((
+            Camera3d::default(),
+            FlyCam,
+            Projection::from(PerspectiveProjection {
+                fov: 90.0_f32.to_radians(),
+                ..Default::default()
+            }),
+            Bloom::default(),
+            Atmosphere::EARTH,
+            AtmosphereSettings {
+                aerial_view_lut_max_distance: 16384.0,
+                ..Default::default()
+            },
+            AtmosphereEnvironmentMapLight::default(),
+            Exposure::SUNLIGHT,
+            Transform::from_xyz(0.0, 10.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+        ))
+        .id();
 
     commands.spawn(Clipmap {
         half_width: 128,
@@ -27,10 +57,20 @@ fn startup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         heightmap: images.add(create_heightmap()),
         horizon: images.add(create_horizon()),
         horizon_coeffs: 1,
-        min: -1312.5,
-        max: 1312.5,
+        min: -10.5,
+        max: 10.5,
         wireframe: false,
     });
+    commands.spawn((
+        DirectionalLight {
+            shadows_enabled: true,
+            illuminance: lux::RAW_SUNLIGHT,
+            color: ALICE_BLUE.into(),
+            ..Default::default()
+        },
+        Transform::from_translation(Vec3::new(100.0, 1000.0, 100.0))
+            .looking_at(Vec3::ZERO, Vec3::Y),
+    ));
 }
 
 fn create_color() -> Image {
