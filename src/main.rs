@@ -11,6 +11,11 @@ use bevy::{
 use bevy_clipmap::{Clipmap, ClipmapPlugin};
 use bevy_flycam::prelude::*;
 
+use crate::{colormap::create_color, heightmap::create_heightmap};
+
+mod colormap;
+mod heightmap;
+
 fn main() -> AppExit {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -47,18 +52,21 @@ fn startup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         ))
         .id();
 
+    let h = create_heightmap();
+    let c = create_color(&h);
+
     commands.spawn(Clipmap {
         half_width: 128,
         levels: 7,
         base_scale: 1.0,
         texel_size: 8.0,
         target,
-        color: images.add(create_color()),
-        heightmap: images.add(create_heightmap()),
+        color: images.add(c),
+        heightmap: images.add(h.image()),
         horizon: images.add(create_horizon()),
         horizon_coeffs: 1,
-        min: -10.5,
-        max: 10.5,
+        min: -300.5,
+        max: 300.5,
         wireframe: false,
     });
     commands.spawn((
@@ -71,50 +79,6 @@ fn startup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         Transform::from_translation(Vec3::new(100.0, 1000.0, 100.0))
             .looking_at(Vec3::ZERO, Vec3::Y),
     ));
-}
-
-fn create_color() -> Image {
-    let mut data = Vec::with_capacity(128 * 128 * 4);
-    for _ in 0..128 {
-        for _ in 0..128 {
-            data.push(255);
-            data.push(0);
-            data.push(0);
-            data.push(255);
-        }
-    }
-    Image::new(
-        Extent3d {
-            width: 128,
-            height: 128,
-            depth_or_array_layers: 1,
-        },
-        bevy::render::render_resource::TextureDimension::D2,
-        data,
-        bevy::render::render_resource::TextureFormat::Rgba8Unorm,
-        RenderAssetUsages::all(),
-    )
-}
-
-fn create_heightmap() -> Image {
-    let mut data = Vec::with_capacity(128 * 128 * 4);
-    for x in 0..128 {
-        for y in 0..128 {
-            let v = (x * y) as f32;
-            data.extend(((v * 0.01).sin().fract() * 1.0f32).to_le_bytes());
-        }
-    }
-    Image::new(
-        Extent3d {
-            width: 128,
-            height: 128,
-            depth_or_array_layers: 1,
-        },
-        bevy::render::render_resource::TextureDimension::D2,
-        data,
-        bevy::render::render_resource::TextureFormat::R32Float,
-        RenderAssetUsages::all(),
-    )
 }
 
 fn create_horizon() -> Image {
