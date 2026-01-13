@@ -11,9 +11,10 @@ use bevy::{
 use bevy_clipmap::{Clipmap, ClipmapPlugin};
 use bevy_flycam::prelude::*;
 
-use crate::{colormap::create_color, heightmap::create_heightmap};
+use crate::{colormap::create_color, erosion::erode, heightmap::create_heightmap};
 
 mod colormap;
+mod erosion;
 mod heightmap;
 
 fn main() -> AppExit {
@@ -52,7 +53,8 @@ fn startup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         ))
         .id();
 
-    let h = create_heightmap();
+    let mut h = create_heightmap();
+    erode(&mut h);
     let c = create_color(&h);
 
     commands.spawn(Clipmap {
