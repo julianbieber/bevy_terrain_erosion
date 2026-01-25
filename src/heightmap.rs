@@ -1,5 +1,6 @@
 use bevy::{
     asset::RenderAssetUsages,
+    ecs::component::Component,
     image::Image,
     math::{Mat3, Vec2, Vec3, Vec3Swizzles},
     render::render_resource::Extent3d,
@@ -11,15 +12,17 @@ pub fn create_heightmap() -> Heightmap {
     for y in 0..Heightmap::DIM {
         for x in 0..Heightmap::DIM {
             let v = Vec2::new(x as f32 * 0.03, y as f32 * 0.03);
-            let h: f32 = mountain_noise(Vec3::new(v.x, v.y, 1.0));
+            let scope = mountain_noise(Vec3::new(v.y * 0.1, v.x * 0.1, 100.0));
+            let h: f32 = mountain_noise(Vec3::new(v.x, v.y, 1.0)) * scope;
             m.set(x, y, h);
         }
     }
     m
 }
 
+#[derive(Component)]
 pub struct Heightmap {
-    values: Vec<f32>,
+    pub values: Vec<f32>,
 }
 
 impl Heightmap {
@@ -170,7 +173,7 @@ fn gyroid(x: Vec3) -> f32 {
 fn dotnoise(mut x: Vec3) -> f32 {
     let mut a = 0.0;
     for _ in 0..4 {
-        x = rot(0.0, 0.1, 0.2) * x;
+        x = rot(0.1, 0.2, 0.3) * x;
         let v = gyroid(x);
 
         a += v * 0.25;
@@ -182,12 +185,12 @@ fn dotnoise(mut x: Vec3) -> f32 {
 fn mountain_noise(x: Vec3) -> f32 {
     let mut a = 0.0;
     let mut f = 1.0;
-    let mut amp = 1.0;
-    for _ in 0..3 {
-        a += 1.0 - dotnoise(x * f).abs() * amp;
-        f *= 1.5;
+    let mut amp = 1.5;
+    for _ in 0..5 {
+        a += dotnoise(x * f).abs() * amp;
+        f *= 2.5;
         amp *= 0.5;
     }
 
-    a.fract()
+    (1.0 - a).tanh()
 }

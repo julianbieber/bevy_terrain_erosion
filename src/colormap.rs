@@ -4,15 +4,17 @@ use crate::heightmap::Heightmap;
 
 pub fn create_color(h: &Heightmap) -> Image {
     let mut data = Vec::with_capacity(128 * 128 * 4);
-    for y in 0..128 {
-        for x in 0..128 {
+    for y in 0..Heightmap::DIM {
+        for x in 0..Heightmap::DIM {
+            let y_f = y as f32 / Heightmap::DIM as f32;
+            let x_f = x as f32 / Heightmap::DIM as f32;
             let h = h.get(x, y);
             let c = color_gradient(
                 Vec3::new(0.0, 0.0, 0.0),
-                Vec3::new(1.0, 0.0, 0.0),
+                Vec3::new(0.4, 0.5, 0.6),
+                Vec3::new(6.1, 6.2, 2.04),
                 Vec3::new(0.0, 0.0, 0.0),
-                Vec3::new(0.0, 0.0, 0.0),
-                h,
+                h + x_f.sin() * 0.01 + y_f.sin() * 0.01,
             );
 
             data.push((c.x.clamp(0.0, 1.0) * 255.0) as u8);
@@ -23,8 +25,8 @@ pub fn create_color(h: &Heightmap) -> Image {
     }
     Image::new(
         Extent3d {
-            width: 128,
-            height: 128,
+            width: Heightmap::DIM,
+            height: Heightmap::DIM,
             depth_or_array_layers: 1,
         },
         bevy::render::render_resource::TextureDimension::D2,
